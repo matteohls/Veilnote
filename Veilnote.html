@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="color-scheme" content="light dark">
+<title>Veilnote</title>
+<style>
+:root{
+  --bg:#f6f3ec;--paper:#fbf9f4;--text:#1d1d1b;--mute:#6a6759;
+  --line:#d8d2c3;--line2:#b9b2a0;--acc:#1f5f4a;--on-acc:#fff;--bad:#a4281f;--input:#fff;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#151618;--paper:#1c1e21;--text:#e8e5dc;--mute:#9b988b;
+  --line:#2f3236;--line2:#464a50;--acc:#8fd1b3;--on-acc:#10201a;--bad:#f08a80;--input:#121315;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:28px 18px 70px}
+
+header{padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:6px}
+h1{margin:0;font:700 34px/1.1 Georgia,"Times New Roman",serif;letter-spacing:-.3px}
+.tag{margin:6px 0 0;color:var(--mute)}
+.status{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;margin-top:14px;font:12.5px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--mute)}
+.status b{color:var(--text);font-weight:600}
+.status .sp{flex:1}
+
+nav{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:22px}
+nav button{border:0;background:none;color:var(--mute);padding:11px 14px;font:inherit;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+nav button:hover{color:var(--text)}
+nav button[aria-selected=true]{color:var(--text);border-bottom-color:var(--acc);font-weight:600}
+
+section{display:none}
+section.on{display:block}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px;margin-bottom:18px}
+h3{margin:0 0 6px;font:700 19px/1.3 Georgia,"Times New Roman",serif}
+.sub{color:var(--mute);margin:0 0 4px;font-size:15px}
+label{display:block;font-size:14px;font-weight:600;margin:18px 0 5px}
+.card>label:first-child,.card>div:first-child>label:first-child{margin-top:0}
+input[type=text],input[type=password],textarea{width:100%;background:var(--input);color:var(--text);border:1px solid var(--line2);border-radius:4px;padding:9px 11px;font:inherit}
+textarea{min-height:140px;resize:vertical}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.5}
+input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:1px}
+input[readonly],textarea[readonly]{background:transparent}
+
+button{font:inherit;cursor:pointer;color:var(--text);background:var(--paper);border:1px solid var(--line2);padding:8px 15px;border-radius:4px}
+button:hover{border-color:var(--text)}
+button.pri{background:var(--acc);color:var(--on-acc);border-color:var(--acc);font-weight:600}
+button.pri:hover{opacity:.9}
+button.danger{color:var(--bad);border-color:var(--line2);padding:4px 10px;font-size:13px}
+button.danger:hover{border-color:var(--bad)}
+button:disabled{opacity:.5;cursor:wait}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:4px;overflow:hidden;max-width:100%}
+.seg button{border:0;border-radius:0;background:var(--input);color:var(--mute)}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button[aria-pressed=true]{background:var(--acc);color:var(--on-acc);font-weight:600}
+
+.note{font-size:14px;color:var(--mute);margin-top:8px}
+.warn{font-size:14px;color:var(--bad)}
+.fp{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text);word-break:break-all}
+.hidden{display:none!important}
+
+.alias{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:7px 8px 7px 11px;border:1px solid var(--line);border-radius:4px;margin-top:8px;background:var(--input);font:13.5px ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.alias button{padding:4px 10px;font-size:13px}
+
+ul.l{margin:8px 0 0;padding-left:20px}
+ul.l li{margin:7px 0}
+p{margin:10px 0 0}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:4px;opacity:0;pointer-events:none;max-width:92vw;z-index:9;font-size:14px}
+#toast.show{opacity:1}
+#toast.err{background:var(--bad);color:#fff}
+footer{color:var(--mute);font-size:13px;margin-top:28px}
+@media (max-width:520px){.card{padding:16px}nav button{padding:10px 10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<noscript>Dit bestand heeft JavaScript nodig. Er wordt niets van buiten geladen.</noscript>
+
+<header>
+  <h1>Veilnote</h1>
+  <p class="tag">Berichten versleutelen in je eigen browser, voordat je ze in een mail plakt.</p>
+  <div class="status">
+    <span>netwerk: <b>geblokkeerd</b></span>
+    <span>opslag: <b>geen</b></span>
+    <span>wist zichzelf over <b id="lockT">5:00</b></span>
+    <span class="sp"></span>
+    <button class="danger" id="wipe" title="Wis alle velden en sleutels uit het geheugen">Wis alles nu</button>
+  </div>
+</header>
+
+<nav role="tablist" id="tabs">
+  <button role="tab" data-t="enc" aria-selected="true">Versleutelen</button>
+  <button role="tab" data-t="dec" aria-selected="false">Ontsleutelen</button>
+  <button role="tab" data-t="key" aria-selected="false">Sleutels</button>
+  <button role="tab" data-t="ali" aria-selected="false">Aliassen</button>
+  <button role="tab" data-t="pri" aria-selected="false">Over privacy</button>
+</nav>
+
+<!-- VERSLEUTELEN -->
+<section id="enc" class="on">
+  <div class="card">
+    <div class="seg" id="emode">
+      <button data-m="pk" aria-pressed="true">Met publieke sleutel</button>
+      <button data-m="pass" aria-pressed="false">Met passphrase</button>
+    </div>
+    <div id="epkBox">
+      <label for="rpub">Publieke sleutel van de ontvanger</label>
+      <input type="text" id="rpub" class="mono" autocomplete="off" spellcheck="false" placeholder="fl1:…">
+      <div class="note" id="rfp"></div>
+    </div>
+    <div id="epassBox" class="hidden">
+      <label for="epass">Passphrase (spreek die af via een ander kanaal)</label>
+      <input type="password" id="epass" autocomplete="new-password" spellcheck="false">
+      <div class="row" style="margin-top:10px"><button id="genPass">Bedenk er een voor me</button><button id="showPass">Toon</button></div>
+    </div>
+    <label for="subj">Onderwerp (wordt ook versleuteld)</label>
+    <input type="text" id="subj" autocomplete="off" spellcheck="false">
+    <label for="body">Bericht</label>
+    <textarea id="body" autocomplete="off" spellcheck="false" autocapitalize="off"></textarea>
+    <div class="row"><button class="pri" id="doEnc">Versleutel</button></div>
+  </div>
+  <div class="card hidden" id="encOut">
+    <label for="cipher">Dit kun je in een gewone mail plakken</label>
+    <textarea id="cipher" class="mono" readonly></textarea>
+    <div class="row">
+      <button class="pri" id="cpCipher">Kopieer</button>
+      <button id="mailto">Open in mailprogramma</button>
+    </div>
+    <div class="note">Het onderwerp van je mail wordt "Versleuteld bericht". Het echte onderwerp zit in de versleutelde tekst.</div>
+  </div>
+</section>
+
+<!-- ONTSLEUTELEN -->
+<section id="dec">
+  <div class="card">
+    <label for="din">Plak hier het versleutelde bericht</label>
+    <textarea id="din" class="mono" autocomplete="off" spellcheck="false" placeholder="-----BEGIN FLUISTER MESSAGE-----"></textarea>
+    <div id="dpassBox" class="hidden">
+      <label for="dpass">Passphrase</label>
+      <input type="password" id="dpass" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="note" id="dhint"></div>
+    <div class="row"><button class="pri" id="doDec">Ontsleutel</button></div>
+  </div>
+  <div class="card hidden" id="decOut">
+    <label>Onderwerp</label>
+    <input type="text" id="dsubj" readonly>
+    <label>Bericht</label>
+    <textarea id="dbody" readonly></textarea>
+    <div class="row"><button id="clrDec">Verberg weer</button></div>
+  </div>
+</section>
+
+<!-- SLEUTELS -->
+<section id="key">
+  <div class="card">
+    <h3>Je sleutelpaar</h3>
+    <p class="sub" id="kstat">Er zit nog geen sleutel in het geheugen. Sleutels bestaan alleen zolang dit tabblad open is.</p>
+    <div class="row">
+      <button class="pri" id="kgen">Maak een nieuw sleutelpaar</button>
+    </div>
+    <div id="kpubBox" class="hidden">
+      <label for="kpub">Je publieke sleutel (die mag iedereen hebben)</label>
+      <input type="text" id="kpub" class="mono" readonly>
+      <div class="note">Vingerafdruk: <span class="fp" id="kfp"></span></div>
+      <div class="row"><button id="cpPub">Kopieer publieke sleutel</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Privésleutel bewaren</h3>
+    <p class="sub">Veilnote slaat niets op. Wil je je sleutel later terug, exporteer hem dan versleuteld en bewaar die tekst zelf, bijvoorbeeld in je wachtwoordmanager.</p>
+    <label for="kpass">Passphrase voor de back-up</label>
+    <input type="password" id="kpass" autocomplete="new-password" spellcheck="false">
+    <div class="row"><button id="kexp">Exporteer privésleutel</button></div>
+    <label for="kblob">Versleutelde back-up (hier komt de export, of plak er een om te importeren)</label>
+    <textarea id="kblob" class="mono" spellcheck="false"></textarea>
+    <div class="row"><button id="kimp">Importeer</button><button id="cpBlob">Kopieer</button></div>
+  </div>
+</section>
+
+<!-- ALIASSEN -->
+<section id="ali">
+  <div class="card">
+    <h3>Aliassen verzinnen</h3>
+    <p class="sub">Gebruik per website of persoon een ander adres, dan kun je lekken niet aan elkaar koppelen. Hier maak je alleen de naam. Het alias zelf moet je instellen bij je mailprovider.</p>
+    <label for="adom">Domein (mag leeg)</label>
+    <input type="text" id="adom" autocomplete="off" spellcheck="false" placeholder="jouwdomein.tld">
+    <div class="row"><button class="pri" id="agen">Geef me vijf aliassen</button></div>
+    <div id="alist"></div>
+  </div>
+</section>
+
+<!-- PRIVACY -->
+<section id="pri">
+  <div class="card">
+    <h3>Wat Veilnote doet</h3>
+    <ul class="l">
+      <li>Alles gebeurt in je browser, met de versleuteling die daar al in zit. Er worden geen scripts, lettertypen of plaatjes van buiten geladen.</li>
+      <li>De pagina laat zelf geen netwerkverbindingen toe. Er kan dus niets naar een server gestuurd worden.</li>
+      <li>Er wordt niets bewaard: geen cookies, geen localStorage, geen cache. Je tekst en sleutels staan alleen in het werkgeheugen.</li>
+      <li>Na 5 minuten niets doen, bij het sluiten van het tabblad en bij "Wis alles nu" wordt alles leeggemaakt.</li>
+      <li>Berichten gaan door AES-256-GCM. Voor publieke sleutels gebruikt Veilnote ECDH P-256 met HKDF, voor wachtwoorden PBKDF2-SHA256 met 600.000 rondes.</li>
+      <li>Onderwerp en tekst worden samen versleuteld en opgevuld tot blokken van 512 bytes, zodat de lengte weinig verraadt.</li>
+      <li>Bij publieke sleutels wordt per bericht een nieuw tijdelijk sleutelpaar gemaakt. De afzender staat dus nergens in het bericht.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Wat Veilnote niet doet</h3>
+    <ul class="l">
+      <li>Het is geen mailserver. Een los HTML-bestand kan geen mail versturen of ontvangen. Je gebruikt het naast een mailprovider zoals cock.li.</li>
+      <li>Van, aan, tijdstip en je IP-adres bij de provider blijven zichtbaar voor de providers. Wil je dat ook verbergen, gebruik dan Tor of een VPN.</li>
+      <li>Is je computer besmet, of doet een browserextensie stiekem mee, dan helpt versleuteling niet.</li>
+      <li>Controleer de vingerafdruk van een publieke sleutel via een ander kanaal, bijvoorbeeld telefonisch, voordat je erop vertrouwt.</li>
+      <li>Veilnote probeert het klembord na 45 seconden leeg te maken, maar dat lukt niet altijd. De klembordgeschiedenis van je systeem kan de tekst bewaren.</li>
+    </ul>
+    <div class="note" id="cryptoChk"></div>
+  </div>
+</section>
+
+<footer>Veilnote draait volledig offline in je browser.</footer>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const enc=new TextEncoder(), dec=new TextDecoder();
+const cat=(...a)=>{const o=new Uint8Array(a.reduce((s,x)=>s+x.length,0));let p=0;for(const x of a){o.set(x,p);p+=x.length}return o};
+const rnd=n=>{const o=new Uint8Array(n);for(let i=0;i<n;i+=65536)crypto.getRandomValues(o.subarray(i,Math.min(n,i+65536)));return o};
+const toB64=u=>{let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+const fromB64=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
+const b64u=u=>toB64(u).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const fromB64u=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return fromB64(s)};
+const armor=(label,u)=>`-----BEGIN ${label}-----\n${toB64(u).match(/.{1,64}/g).join('\n')}\n-----END ${label}-----`;
+const unarmor=t=>{const m=t.match(/-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/);return{label:m?m[1]:null,bytes:fromB64((m?m[2]:t).replace(/\s+/g,''))}};
+const ri=n=>{const lim=Math.floor(0x100000000/n)*n;const a=new Uint32Array(1);do{crypto.getRandomValues(a)}while(a[0]>=lim);return a[0]%n};
+
+const MSG='FLUISTER MESSAGE', KEYL='FLUISTER KEY', PUBP='fl1:';
+const NOKEY='Er zit nog geen sleutel in het geheugen. Sleutels bestaan alleen zolang dit tabblad open is.';
+let myPriv=null, myPub=null, lastTimer=null;
+
+/* ---------- toast ---------- */
+let tt;
+function toast(m,err){const t=$('#toast');t.textContent=m;t.className='show'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.className='',err?5000:2200)}
+async function run(btn,fn){btn.disabled=true;try{await fn()}catch(e){toast(e&&e.message?e.message:'Er ging iets mis.',true)}finally{btn.disabled=false}}
+
+/* ---------- crypto ---------- */
+async function pkey(pass,salt,iter,usage){
+  const km=await crypto.subtle.importKey('raw',enc.encode(pass.normalize('NFKC')),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,usage);
+}
+async function sealPass(mode,payload,pass){
+  const salt=rnd(16),iv=rnd(12),iter=600000,it=new Uint8Array(4);
+  new DataView(it.buffer).setUint32(0,iter);
+  const aad=cat(Uint8Array.of(0x50,0x4d,1,mode),salt,it);
+  const k=await pkey(pass,salt,iter,['encrypt']);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad},k,payload));
+  return cat(aad,iv,ct);
+}
+async function openPass(b,pass){
+  if(b.length<53)throw new Error('Het bericht is te kort of beschadigd.');
+  const iter=new DataView(b.buffer,b.byteOffset).getUint32(20);
+  if(iter<100000||iter>5000000)throw new Error('Ongeldige parameters.');
+  const k=await pkey(pass,b.slice(4,20),iter,['decrypt']);
+  return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(24,36),additionalData:b.slice(0,24)},k,b.slice(36)));
+}
+async function ecKey(priv,pubRaw){
+  const pub=await crypto.subtle.importKey('raw',pubRaw,{name:'ECDH',namedCurve:'P-256'},false,[]);
+  const bits=await crypto.subtle.deriveBits({name:'ECDH',public:pub},priv,256);
+  const hk=await crypto.subtle.importKey('raw',bits,'HKDF',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:new Uint8Array(0),info:enc.encode('fluister-v1')},hk,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function sealPk(pubRaw,payload){
+  const eph=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},false,['deriveBits']);
+  const ephRaw=new Uint8Array(await crypto.subtle.exportKey('raw',eph.publicKey));
+  const k=await ecKey(eph.privateKey,pubRaw), iv=rnd(12);
+  const aad=cat(Uint8Array.of(0x50,0x4d,1,2),ephRaw);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad},k,payload));
+  return cat(aad,iv,ct);
+}
+async function openPk(b){
+  if(!myPriv)throw new Error('Er zit geen privésleutel in het geheugen. Maak of importeer er een bij Sleutels.');
+  if(b.length<98)throw new Error('Het bericht is te kort of beschadigd.');
+  const k=await ecKey(myPriv,b.slice(4,69));
+  return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(69,81),additionalData:b.slice(0,69)},k,b.slice(81)));
+}
+function pad(u){const t=4+u.length,n=Math.ceil(t/512)*512,o=new Uint8Array(n);new DataView(o.buffer).setUint32(0,u.length);o.set(u,4);o.set(rnd(n-t),t);return o}
+function unpad(u){const l=new DataView(u.buffer,u.byteOffset).getUint32(0);if(l>u.length-4)throw new Error('Beschadigd bericht.');return u.slice(4,4+l)}
+async function fingerprint(raw){const h=new Uint8Array(await crypto.subtle.digest('SHA-256',raw));return[...h.slice(0,16)].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase().match(/.{4}/g).join(' ')}
+function parsePub(s){
+  s=s.replace(/\s+/g,'');
+  if(!s.startsWith(PUBP))throw new Error('Een publieke sleutel begint met '+PUBP);
+  let raw;try{raw=fromB64u(s.slice(PUBP.length))}catch{throw new Error('Deze publieke sleutel is ongeldig.')}
+  if(raw.length!==65||raw[0]!==4)throw new Error('Deze publieke sleutel is ongeldig.');
+  return raw;
+}
+
+/* ---------- tabs ---------- */
+$$('#tabs button').forEach(b=>b.onclick=()=>{
+  $$('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  $$('section').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));
+});
+
+/* ---------- versleutelen ---------- */
+let emode='pk';
+$$('#emode button').forEach(b=>b.onclick=()=>{
+  emode=b.dataset.m;
+  $$('#emode button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  $('#epkBox').classList.toggle('hidden',emode!=='pk');
+  $('#epassBox').classList.toggle('hidden',emode!=='pass');
+});
+$('#rpub').addEventListener('input',async()=>{
+  const v=$('#rpub').value.trim();
+  if(!v){$('#rfp').textContent='';return}
+  try{const f=await fingerprint(parsePub(v));$('#rfp').innerHTML='Vingerafdruk: <span class="fp"></span>';$('#rfp').querySelector('.fp').textContent=f}
+  catch(e){$('#rfp').innerHTML='<span class="warn"></span>';$('#rfp').firstChild.textContent=e.message}
+});
+$('#genPass').onclick=()=>{
+  const al='abcdefghjkmnpqrstuvwxyz23456789';let g=[];
+  for(let i=0;i<5;i++){let s='';for(let j=0;j<5;j++)s+=al[ri(al.length)];g.push(s)}
+  $('#epass').value=g.join('-');$('#epass').type='text';$('#showPass').textContent='Verberg';
+};
+$('#showPass').onclick=()=>{const p=$('#epass');p.type=p.type==='password'?'text':'password';$('#showPass').textContent=p.type==='password'?'Toon':'Verberg'};
+
+$('#doEnc').onclick=e=>run(e.currentTarget,async()=>{
+  const subj=$('#subj').value,body=$('#body').value;
+  if(!subj&&!body)throw new Error('Schrijf eerst een bericht.');
+  const payload=pad(enc.encode(JSON.stringify({s:subj,b:body})));
+  let out;
+  if(emode==='pass'){
+    const p=$('#epass').value;
+    if(p.length<12)throw new Error('Gebruik een passphrase van minstens 12 tekens.');
+    out=await sealPass(1,payload,p);
+  }else{
+    out=await sealPk(parsePub($('#rpub').value),payload);
+  }
+  $('#cipher').value=armor(MSG,out);
+  $('#encOut').classList.remove('hidden');
+  toast('Versleuteld.');
+});
+
+/* ---------- klembord ---------- */
+async function copy(text){
+  try{await navigator.clipboard.writeText(text)}catch{
+    const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();
+  }
+  toast('Gekopieerd. Na 45 seconden proberen we het klembord te legen.');
+  clearTimeout(lastTimer);
+  lastTimer=setTimeout(()=>{try{navigator.clipboard.writeText('')}catch{}},45000);
+}
+$('#cpCipher').onclick=()=>copy($('#cipher').value);
+$('#mailto').onclick=()=>{
+  location.href='mailto:?subject='+encodeURIComponent('Versleuteld bericht')+'&body='+encodeURIComponent($('#cipher').value);
+};
+
+/* ---------- ontsleutelen ---------- */
+$('#din').addEventListener('input',()=>{
+  const v=$('#din').value.trim();$('#dhint').textContent='';$('#dpassBox').classList.add('hidden');
+  if(!v)return;
+  try{
+    const b=unarmor(v).bytes;
+    if(b[0]!==0x50||b[1]!==0x4d||b[2]!==1){$('#dhint').textContent='Dit formaat ken ik niet.';return}
+    if(b[3]===1){$('#dpassBox').classList.remove('hidden');$('#dhint').textContent='Dit bericht is met een passphrase versleuteld.'}
+    else if(b[3]===2){$('#dhint').textContent=myPriv?'Dit bericht is voor een publieke sleutel versleuteld. Je privésleutel wordt gebruikt.':'Dit bericht is voor een publieke sleutel versleuteld. Maak of importeer eerst je privésleutel bij Sleutels.'}
+  }catch{$('#dhint').textContent='Dit lijkt geen geldig bericht.'}
+});
+$('#doDec').onclick=e=>run(e.currentTarget,async()=>{
+  let b;try{b=unarmor($('#din').value.trim()).bytes}catch{throw new Error('Dit lijkt geen geldig bericht.')}
+  if(b[0]!==0x50||b[1]!==0x4d||b[2]!==1)throw new Error('Dit formaat ken ik niet.');
+  let plain;
+  try{
+    if(b[3]===1){const p=$('#dpass').value;if(!p)throw new Error('Vul de passphrase in.');plain=await openPass(b,p)}
+    else if(b[3]===2)plain=await openPk(b);
+    else throw new Error('Dit berichttype ken ik niet.');
+  }catch(err){
+    if(err instanceof DOMException)throw new Error('Ontsleutelen lukt niet: verkeerde sleutel of passphrase, of het bericht is aangepast.');
+    throw err;
+  }
+  const o=JSON.parse(dec.decode(unpad(plain)));
+  $('#dsubj').value=String(o.s||'');$('#dbody').value=String(o.b||'');
+  $('#decOut').classList.remove('hidden');
+});
+$('#clrDec').onclick=()=>{$('#dsubj').value='';$('#dbody').value='';$('#decOut').classList.add('hidden')};
+
+/* ---------- sleutels ---------- */
+async function showKey(){
+  if(!myPub){$('#kpubBox').classList.add('hidden');$('#kstat').textContent=NOKEY;return}
+  $('#kstat').textContent='Er is een sleutelpaar actief in het geheugen.';
+  $('#kpub').value=PUBP+b64u(myPub);
+  $('#kfp').textContent=await fingerprint(myPub);
+  $('#kpubBox').classList.remove('hidden');
+}
+$('#kgen').onclick=e=>run(e.currentTarget,async()=>{
+  const kp=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']);
+  myPriv=kp.privateKey;myPub=new Uint8Array(await crypto.subtle.exportKey('raw',kp.publicKey));
+  await showKey();toast('Nieuw sleutelpaar gemaakt.');
+});
+$('#cpPub').onclick=()=>copy($('#kpub').value);
+$('#kexp').onclick=e=>run(e.currentTarget,async()=>{
+  if(!myPriv)throw new Error('Er is geen privésleutel om te exporteren.');
+  const p=$('#kpass').value;if(p.length<12)throw new Error('Gebruik een passphrase van minstens 12 tekens.');
+  const pk=new Uint8Array(await crypto.subtle.exportKey('pkcs8',myPriv));
+  $('#kblob').value=armor(KEYL,await sealPass(3,pk,p));
+  toast('Versleutelde back-up gemaakt.');
+});
+$('#cpBlob').onclick=()=>copy($('#kblob').value);
+$('#kimp').onclick=e=>run(e.currentTarget,async()=>{
+  let b;try{b=unarmor($('#kblob').value.trim()).bytes}catch{throw new Error('Dit lijkt geen geldige back-up.')}
+  if(b[0]!==0x50||b[1]!==0x4d||b[3]!==3)throw new Error('Dit is geen sleutel-back-up.');
+  const p=$('#kpass').value;if(!p)throw new Error('Vul de passphrase in.');
+  let pk;try{pk=await openPass(b,p)}catch(err){throw err instanceof DOMException?new Error('Importeren lukt niet: verkeerde passphrase of beschadigde back-up.'):err}
+  const key=await crypto.subtle.importKey('pkcs8',pk,{name:'ECDH',namedCurve:'P-256'},true,['deriveBits']);
+  const jwk=await crypto.subtle.exportKey('jwk',key);
+  myPriv=key;myPub=cat(Uint8Array.of(4),fromB64u(jwk.x),fromB64u(jwk.y));
+  await showKey();toast('Sleutel geïmporteerd.');
+});
+
+/* ---------- aliassen ---------- */
+const W1=['stille','snelle','grijze','zachte','lege','koude','warme','late','kleine','rustige','heldere','vage','trage','losse','blanke','diepe','scherpe','dunne','gouden','zilveren','houten','ronde','witte','nachtelijke'];
+const W2=['valk','vos','ezel','mus','kraai','otter','das','mol','uil','haas','pad','reiger','zwaan','eland','bever','specht','merel','kikker','lynx','raaf','hert','tijger','wolf','zeehond'];
+$('#agen').onclick=()=>{
+  const dom=$('#adom').value.trim().replace(/^@/,'');const box=$('#alist');box.textContent='';
+  for(let i=0;i<5;i++){
+    const a=W1[ri(W1.length)]+'.'+W2[ri(W2.length)]+'.'+String(ri(10000)).padStart(4,'0')+(dom?'@'+dom:'');
+    const d=document.createElement('div');d.className='alias';
+    const s=document.createElement('span');s.textContent=a;
+    const b=document.createElement('button');b.textContent='Kopieer';b.onclick=()=>copy(a);
+    d.append(s,b);box.append(d);
+  }
+};
+
+/* ---------- wissen + automatisch wissen ---------- */
+function wipeAll(silent){
+  $$('input[type=text],input[type=password],textarea').forEach(x=>x.value='');
+  myPriv=null;myPub=null;
+  $('#rfp').textContent='';$('#dhint').textContent='';$('#alist').textContent='';
+  ['#encOut','#decOut','#kpubBox','#dpassBox'].forEach(s=>$(s).classList.add('hidden'));
+  $('#kstat').textContent=NOKEY;
+  try{navigator.clipboard.writeText('')}catch{}
+  if(!silent)toast('Alles gewist.');
+}
+$('#wipe').onclick=()=>wipeAll(false);
+const LIMIT=300;let left=LIMIT;
+const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+['pointerdown','keydown','input','scroll'].forEach(ev=>addEventListener(ev,()=>{left=LIMIT},{passive:true}));
+setInterval(()=>{
+  left--;$('#lockT').textContent=fmt(Math.max(left,0));
+  if(left<=0){wipeAll(true);left=LIMIT;toast('Automatisch gewist omdat je even niets deed.')}
+},1000);
+addEventListener('pagehide',()=>wipeAll(true));
+
+/* ---------- check ---------- */
+$('#cryptoChk').textContent=(window.crypto&&crypto.subtle)
+  ?'Versleuteling is beschikbaar in deze browser.'
+  :'Let op: deze browser heeft geen versleuteling beschikbaar. Open het bestand in een recente browser.';
+if(!(window.crypto&&crypto.subtle))toast('Versleuteling ontbreekt in deze browser.',true);
+})();
+</script>
+</body>
+</html>
